@@ -1,522 +1,374 @@
 import { useState, useEffect } from 'react'
-import Admin from './Admin'
-import Cozinha from './Cozinha'
 import { supabase } from './supabase'
 
-// Pega o slug da URL ex: /burguerhouse -> burguerhouse
-function getSlug() {
-  const path = window.location.pathname.replace('/', '').split('/')[0]
-  if (path === 'admin' || path === 'cozinha' || path === '') return null
-  return path || null
-}
+function TelaLogin({ onLogin, nomeLoja }) {
+  const [senha, setSenha] = useState('')
+  const [erro, setErro] = useState('')
 
-function getRotaEspecial() {
-  const path = window.location.pathname.replace('/', '').split('/')[0]
-  if (path === 'admin') return 'admin'
-  if (path === 'cozinha') return 'cozinha'
-  return null
-}
+  function entrar() {
+    if (senha === 'admin123') {
+      onLogin()
+    } else {
+      setErro('Senha incorreta!')
+    }
+  }
 
-function TelaInicio({ onComecar, onAdmin, loja }) {
   return (
     <div style={{
-      minHeight: '100vh',
-      background: loja?.cor_primaria || '#E85D04',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 32
+      minHeight: '100vh', background: '#1a1a1a',
+      display: 'flex', alignItems: 'center', justifyContent: 'center'
     }}>
-      {loja?.logo_url ? (
-        <img src={loja.logo_url} alt={loja.nome} style={{ width: 120, height: 120, borderRadius: 24, objectFit: 'cover' }} />
-      ) : (
-        <div style={{ fontSize: 80 }}>🍔</div>
-      )}
-      <h1 style={{ color: '#fff', fontSize: 42, fontWeight: 700 }}>
-        {loja?.nome || 'Burger House'}
-      </h1>
-      <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 20 }}>
-        Toque para começar
-      </p>
-      <button onClick={onComecar} style={{
-        background: '#fff',
-        color: loja?.cor_primaria || '#E85D04',
-        fontSize: 24, fontWeight: 700,
-        padding: '20px 60px', borderRadius: 16, marginTop: 16,
-        border: 'none', cursor: 'pointer'
-      }}>
-        Fazer Pedido
-      </button>
-      <button onClick={onAdmin} style={{
-        background: 'transparent', color: 'rgba(255,255,255,0.2)',
-        fontSize: 11, marginTop: 40, padding: '8px 16px',
-        border: 'none', cursor: 'pointer'
-      }}>⚙</button>
-    </div>
-  )
-}
-
-function TelaCategorias({ onEscolher, carrinho, onVerCarrinho, loja }) {
-  const [categorias, setCategorias] = useState([])
-  const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
-  const cor = loja?.cor_primaria || '#E85D04'
-
-  useEffect(() => {
-    let query = supabase.from('categorias').select('*').eq('ativo', true).order('ordem')
-    if (loja?.id) query = query.eq('loja_id', loja.id)
-    query.then(({ data }) => setCategorias(data || []))
-  }, [loja])
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <div style={{
-        background: cor, padding: '20px 24px',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+        background: '#fff', borderRadius: 20, padding: 40,
+        width: '100%', maxWidth: 380, textAlign: 'center'
       }}>
-        <h2 style={{ color: '#fff', fontSize: 22 }}>O que você quer?</h2>
-        {carrinho.length > 0 && (
-          <button onClick={onVerCarrinho} style={{
-            background: '#fff', color: cor,
-            padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 15,
-            border: 'none', cursor: 'pointer'
-          }}>🛒 R$ {total.toFixed(2)}</button>
-        )}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, padding: 24 }}>
-        {categorias.map(cat => (
-          <button key={cat.id} onClick={() => onEscolher(cat)} style={{
-            background: '#fff', borderRadius: 16, padding: '32px 16px',
-            fontSize: 16, fontWeight: 600, color: '#333',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: 'none', cursor: 'pointer'
-          }}>
-            <span style={{ fontSize: 48 }}>{cat.icone}</span>
-            {cat.nome}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function TelaProdutos({ categoria, onVoltar, onAdicionar, carrinho, onVerCarrinho, loja }) {
-  const [produtos, setProdutos] = useState([])
-  const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
-  const cor = loja?.cor_primaria || '#E85D04'
-
-  useEffect(() => {
-    let query = supabase.from('produtos').select('*')
-      .eq('categoria_id', categoria.id)
-      .eq('disponivel', true)
-      .order('ordem')
-    if (loja?.id) query = query.eq('loja_id', loja.id)
-    query.then(({ data }) => setProdutos(data || []))
-  }, [categoria.id, loja])
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <div style={{
-        background: cor, padding: '20px 24px',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onVoltar} style={{
-            background: 'rgba(255,255,255,0.2)', color: '#fff',
-            padding: '8px 14px', borderRadius: 8, fontSize: 18, border: 'none', cursor: 'pointer'
-          }}>←</button>
-          <h2 style={{ color: '#fff', fontSize: 22 }}>{categoria.icone} {categoria.nome}</h2>
-        </div>
-        {carrinho.length > 0 && (
-          <button onClick={onVerCarrinho} style={{
-            background: '#fff', color: cor,
-            padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 15,
-            border: 'none', cursor: 'pointer'
-          }}>🛒 R$ {total.toFixed(2)}</button>
-        )}
-      </div>
-
-      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {produtos.length === 0 && (
-          <p style={{ textAlign: 'center', color: '#888', marginTop: 40 }}>
-            Nenhum produto disponível
-          </p>
-        )}
-        {produtos.map(prod => (
-          <div key={prod.id} style={{
-            background: '#fff', borderRadius: 16,
-            display: 'flex', alignItems: 'center',
-            overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-          }}>
-            <div style={{
-              width: 110, height: 110, flexShrink: 0,
-              background: '#f5f5f5',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              {prod.imagem_url ? (
-                <img src={prod.imagem_url} alt={prod.nome}
-                  style={{ width: 110, height: 110, objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: 40 }}>🍔</span>
-              )}
-            </div>
-            <div style={{ flex: 1, padding: '12px 14px' }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#222' }}>{prod.nome}</div>
-              <div style={{ fontSize: 13, color: '#888', marginTop: 3, lineHeight: 1.4 }}>
-                {prod.descricao}
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: cor, marginTop: 6 }}>
-                R$ {prod.preco.toFixed(2)}
-              </div>
-            </div>
-            <button onClick={() => onAdicionar(prod)} style={{
-              background: cor, color: '#fff',
-              width: 48, height: 48, borderRadius: 10,
-              fontSize: 26, fontWeight: 700, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: 'none', cursor: 'pointer', margin: 14
-            }}>+</button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function TelaCarrinho({ carrinho, onVoltar, onAvancar, onRemover, loja }) {
-  const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
-  const cor = loja?.cor_primaria || '#E85D04'
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <div style={{
-        background: cor, padding: '20px 24px',
-        display: 'flex', alignItems: 'center', gap: 12
-      }}>
-        <button onClick={onVoltar} style={{
-          background: 'rgba(255,255,255,0.2)', color: '#fff',
-          padding: '8px 14px', borderRadius: 8, fontSize: 18, border: 'none', cursor: 'pointer'
-        }}>←</button>
-        <h2 style={{ color: '#fff', fontSize: 22 }}>Meu Pedido</h2>
-      </div>
-
-      <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {carrinho.length === 0 && (
-          <p style={{ textAlign: 'center', color: '#888', marginTop: 60, fontSize: 18 }}>
-            Carrinho vazio
-          </p>
-        )}
-        {carrinho.map((item, i) => (
-          <div key={i} style={{
-            background: '#fff', borderRadius: 16, padding: 16,
-            display: 'flex', alignItems: 'center', gap: 12,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
-          }}>
-            <div style={{
-              width: 56, height: 56, borderRadius: 10, flexShrink: 0,
-              background: '#f5f5f5', overflow: 'hidden',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
-            }}>
-              {item.imagem_url ? (
-                <img src={item.imagem_url} alt={item.nome}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : (
-                <span style={{ fontSize: 26 }}>🍔</span>
-              )}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{item.nome}</div>
-              <div style={{ fontSize: 14, color: cor, marginTop: 2 }}>
-                R$ {(item.preco * item.qty).toFixed(2)}
-              </div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 15, fontWeight: 600 }}>x{item.qty}</span>
-              <button onClick={() => onRemover(i)} style={{
-                background: '#fee', color: '#e33',
-                width: 34, height: 34, borderRadius: 8, fontSize: 18,
-                border: 'none', cursor: 'pointer'
-              }}>×</button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {carrinho.length > 0 && (
-        <div style={{ padding: '0 24px 24px' }}>
-          <div style={{
-            background: '#fff', borderRadius: 16, padding: 20,
-            marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            display: 'flex', justifyContent: 'space-between', fontSize: 20, fontWeight: 700
-          }}>
-            <span>Total</span>
-            <span style={{ color: cor }}>R$ {total.toFixed(2)}</span>
-          </div>
-          <button onClick={onAvancar} style={{
-            width: '100%', background: cor, color: '#fff',
-            padding: 20, borderRadius: 16, fontSize: 20, fontWeight: 700,
-            border: 'none', cursor: 'pointer'
-          }}>Escolher Pagamento →</button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function TelaPagamento({ carrinho, onVoltar, onFinalizar, loja }) {
-  const [pagamento, setPagamento] = useState(null)
-  const [local, setLocal] = useState(null)
-  const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
-  const cor = loja?.cor_primaria || '#E85D04'
-
-  const formas = [
-    { id: 'cartao_credito', nome: 'Crédito',  icone: '💳' },
-    { id: 'cartao_debito',  nome: 'Débito',   icone: '💳' },
-    { id: 'pix',            nome: 'PIX',      icone: '📱' },
-    { id: 'dinheiro',       nome: 'Dinheiro', icone: '💵' },
-  ]
-
-  const locais = [
-    { id: 'aqui',   nome: 'Comer Aqui',  icone: '🪑' },
-    { id: 'viagem', nome: 'Para Viagem', icone: '🛍️' },
-  ]
-
-  const podeFinalizar = pagamento && local
-
-  return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <div style={{
-        background: cor, padding: '20px 24px',
-        display: 'flex', alignItems: 'center', gap: 12
-      }}>
-        <button onClick={onVoltar} style={{
-          background: 'rgba(255,255,255,0.2)', color: '#fff',
-          padding: '8px 14px', borderRadius: 8, fontSize: 18, border: 'none', cursor: 'pointer'
-        }}>←</button>
-        <h2 style={{ color: '#fff', fontSize: 22 }}>Finalizar Pedido</h2>
-      </div>
-
-      <div style={{ padding: 24 }}>
-        <div style={{
-          background: '#fff', borderRadius: 16, padding: 20, marginBottom: 24,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-        }}>
-          <span style={{ fontSize: 18, color: '#666' }}>Total do pedido</span>
-          <span style={{ fontSize: 24, fontWeight: 700, color: cor }}>
-            R$ {total.toFixed(2)}
-          </span>
-        </div>
-
-        <p style={{ fontSize: 18, fontWeight: 600, color: '#333', marginBottom: 12 }}>
-          Para comer onde?
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-          {locais.map(l => (
-            <button key={l.id} onClick={() => setLocal(l.id)} style={{
-              background: local === l.id ? cor : '#fff',
-              color: local === l.id ? '#fff' : '#333',
-              border: local === l.id ? `2px solid ${cor}` : '2px solid #eee',
-              borderRadius: 16, padding: '20px 16px', fontSize: 16, fontWeight: 600,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer'
-            }}>
-              <span style={{ fontSize: 36 }}>{l.icone}</span>
-              {l.nome}
-            </button>
-          ))}
-        </div>
-
-        <p style={{ fontSize: 18, fontWeight: 600, color: '#333', marginBottom: 12 }}>
-          Como vai pagar?
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-          {formas.map(f => (
-            <button key={f.id} onClick={() => setPagamento(f.id)} style={{
-              background: pagamento === f.id ? cor : '#fff',
-              color: pagamento === f.id ? '#fff' : '#333',
-              border: pagamento === f.id ? `2px solid ${cor}` : '2px solid #eee',
-              borderRadius: 16, padding: '20px 16px', fontSize: 16, fontWeight: 600,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer'
-            }}>
-              <span style={{ fontSize: 36 }}>{f.icone}</span>
-              {f.nome}
-            </button>
-          ))}
-        </div>
-
-        <button
-          onClick={() => podeFinalizar && onFinalizar(pagamento, local)}
+        <div style={{ fontSize: 48, marginBottom: 16 }}>🍔</div>
+        <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>Painel Admin</h2>
+        <p style={{ color: '#888', marginBottom: 24 }}>{nomeLoja || 'Carregando...'}</p>
+        <input
+          type="password"
+          placeholder="Digite a senha"
+          value={senha}
+          onChange={e => setSenha(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && entrar()}
           style={{
-            width: '100%', background: podeFinalizar ? cor : '#ccc',
-            color: '#fff', padding: 20, borderRadius: 16, fontSize: 20, fontWeight: 700,
-            border: 'none', cursor: podeFinalizar ? 'pointer' : 'not-allowed'
+            width: '100%', padding: '14px 16px', borderRadius: 10,
+            border: '2px solid #eee', fontSize: 16, marginBottom: 12, outline: 'none'
           }}
-        >
-          {podeFinalizar ? 'Confirmar Pedido ✓' : 'Selecione as opções acima'}
-        </button>
+        />
+        {erro && <p style={{ color: 'red', marginBottom: 12 }}>{erro}</p>}
+        <button onClick={entrar} style={{
+          width: '100%', background: '#E85D04', color: '#fff',
+          padding: '14px', borderRadius: 10, fontSize: 16, fontWeight: 700,
+          border: 'none', cursor: 'pointer'
+        }}>Entrar</button>
+        <p style={{ color: '#bbb', fontSize: 12, marginTop: 16 }}>Senha padrão: admin123</p>
       </div>
     </div>
   )
 }
 
-function TelaConfirmacao({ numero, onNovoPedido, loja }) {
+function FormProduto({ produto, categorias, onSalvar, onCancelar }) {
+  const [form, setForm] = useState(produto || {
+    nome: '', descricao: '', preco: '', categoria_id: '', disponivel: true, imagem_url: ''
+  })
+  const [uploading, setUploading] = useState(false)
+  const [preview, setPreview] = useState(produto?.imagem_url || null)
+
+  function atualizar(campo, valor) {
+    setForm(prev => ({ ...prev, [campo]: valor }))
+  }
+
+  async function uploadImagem(e) {
+    const arquivo = e.target.files[0]
+    if (!arquivo) return
+    setUploading(true)
+    const ext = arquivo.name.split('.').pop()
+    const nomeArquivo = `${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('produtos').upload(nomeArquivo, arquivo)
+    if (error) { alert('Erro ao fazer upload!'); setUploading(false); return }
+    const { data } = supabase.storage.from('produtos').getPublicUrl(nomeArquivo)
+    setPreview(data.publicUrl)
+    atualizar('imagem_url', data.publicUrl)
+    setUploading(false)
+  }
+
   return (
     <div style={{
-      minHeight: '100vh', background: '#1a9c5b',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 24
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 100, padding: 24, overflowY: 'auto'
     }}>
-      <div style={{ fontSize: 80 }}>✅</div>
-      <h1 style={{ color: '#fff', fontSize: 36, fontWeight: 700 }}>Pedido Realizado!</h1>
-      <div style={{
-        background: '#fff', borderRadius: 24, padding: '32px 64px', textAlign: 'center'
-      }}>
-        <div style={{ fontSize: 18, color: '#666' }}>Sua senha</div>
-        <div style={{ fontSize: 80, fontWeight: 700, color: '#1a9c5b' }}>
-          #{String(numero).padStart(3, '0')}
+      <div style={{ background: '#fff', borderRadius: 20, padding: 32, width: '100%', maxWidth: 480 }}>
+        <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24 }}>
+          {produto ? 'Editar Produto' : 'Novo Produto'}
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>
+              Foto do produto
+            </label>
+            <div style={{
+              border: '2px dashed #eee', borderRadius: 12, padding: 16,
+              textAlign: 'center', cursor: 'pointer', background: '#fafafa'
+            }} onClick={() => document.getElementById('input-imagem').click()}>
+              {preview ? (
+                <img src={preview} alt="preview" style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 8 }} />
+              ) : (
+                <div>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
+                  <div style={{ fontSize: 14, color: '#888' }}>
+                    {uploading ? 'Enviando...' : 'Toque para adicionar foto'}
+                  </div>
+                </div>
+              )}
+            </div>
+            <input id="input-imagem" type="file" accept="image/*" onChange={uploadImagem} style={{ display: 'none' }} />
+            {preview && (
+              <button onClick={() => { setPreview(null); atualizar('imagem_url', '') }}
+                style={{ marginTop: 8, fontSize: 12, color: '#e33', background: 'none', border: 'none', cursor: 'pointer' }}>
+                Remover foto
+              </button>
+            )}
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Nome do produto</label>
+            <input value={form.nome} onChange={e => atualizar('nome', e.target.value)}
+              placeholder="Ex: Smash Clássico"
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '2px solid #eee', fontSize: 15, outline: 'none' }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Descrição</label>
+            <input value={form.descricao} onChange={e => atualizar('descricao', e.target.value)}
+              placeholder="Ex: Blend 180g, cheddar, alface"
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '2px solid #eee', fontSize: 15, outline: 'none' }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Preço (R$)</label>
+            <input type="number" value={form.preco} onChange={e => atualizar('preco', e.target.value)}
+              placeholder="Ex: 28.90"
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '2px solid #eee', fontSize: 15, outline: 'none' }} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: '#666', display: 'block', marginBottom: 6 }}>Categoria</label>
+            <select value={form.categoria_id} onChange={e => atualizar('categoria_id', e.target.value)}
+              style={{ width: '100%', padding: '12px 14px', borderRadius: 10, border: '2px solid #eee', fontSize: 15, outline: 'none', background: '#fff' }}>
+              <option value="">Selecione uma categoria</option>
+              {categorias.map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.icone} {cat.nome}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input type="checkbox" id="disponivel" checked={form.disponivel}
+              onChange={e => atualizar('disponivel', e.target.checked)}
+              style={{ width: 20, height: 20 }} />
+            <label htmlFor="disponivel" style={{ fontSize: 15, color: '#333' }}>
+              Produto disponível no cardápio
+            </label>
+          </div>
         </div>
-        <div style={{ fontSize: 16, color: '#888' }}>Aguarde ser chamado</div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+          <button onClick={onCancelar} style={{
+            flex: 1, padding: 14, borderRadius: 10,
+            border: '2px solid #eee', fontSize: 15, background: '#fff', color: '#333', cursor: 'pointer'
+          }}>Cancelar</button>
+          <button onClick={() => onSalvar(form)} disabled={uploading} style={{
+            flex: 2, padding: 14, borderRadius: 10,
+            background: uploading ? '#ccc' : '#E85D04', color: '#fff', fontSize: 15, fontWeight: 700,
+            border: 'none', cursor: uploading ? 'not-allowed' : 'pointer'
+          }}>{uploading ? 'Aguarde...' : 'Salvar Produto'}</button>
+        </div>
       </div>
-      <button onClick={onNovoPedido} style={{
-        background: '#fff', color: '#1a9c5b',
-        padding: '18px 48px', borderRadius: 16, fontSize: 20, fontWeight: 700,
-        border: 'none', cursor: 'pointer'
-      }}>Novo Pedido</button>
     </div>
   )
 }
 
-export default function App() {
-  const [tela, setTela] = useState('inicio')
-  const [categoriaAtual, setCategoriaAtual] = useState(null)
-  const [carrinho, setCarrinho] = useState([])
-  const [numeroPedido, setNumeroPedido] = useState(null)
+export default function Admin() {
+  const [logado, setLogado] = useState(false)
   const [loja, setLoja] = useState(null)
+  const [produtos, setProdutos] = useState([])
+  const [categorias, setCategorias] = useState([])
+  const [carregando, setCarregando] = useState(true)
+  const [formAberto, setFormAberto] = useState(false)
+  const [produtoEditando, setProdutoEditando] = useState(null)
+  const [categoriaFiltro, setCategoriaFiltro] = useState('todas')
+  const [mensagem, setMensagem] = useState('')
 
-  const rotaEspecial = getRotaEspecial()
-  const slug = getSlug()
+  // Pega o slug da URL ex: /burguerhouse/admin -> burguerhouse
+  const slug = window.location.pathname.split('/').filter(Boolean)[0]
 
   useEffect(() => {
-    if (rotaEspecial) return
     async function carregarLoja() {
-      if (slug) {
-        const { data } = await supabase
-          .from('lojas').select('*').eq('slug', slug).single()
+      if (slug && slug !== 'admin') {
+        const { data } = await supabase.from('lojas').select('*').eq('slug', slug).single()
         setLoja(data)
       } else {
-        const { data } = await supabase
-          .from('lojas').select('*').eq('ativo', true).limit(1).single()
+        const { data } = await supabase.from('lojas').select('*').eq('ativo', true).limit(1).single()
         setLoja(data)
       }
     }
     carregarLoja()
   }, [])
 
-  function adicionarAoCarrinho(produto) {
-    setCarrinho(prev => {
-      const existe = prev.find(i => i.id === produto.id)
-      if (existe) {
-        return prev.map(i => i.id === produto.id ? { ...i, qty: i.qty + 1 } : i)
-      }
-      return [...prev, { ...produto, qty: 1 }]
-    })
+  useEffect(() => {
+    if (logado && loja) carregarDados()
+  }, [logado, loja])
+
+  async function carregarDados() {
+    setCarregando(true)
+    const { data: cats } = await supabase.from('categorias').select('*')
+      .eq('loja_id', loja.id).order('ordem')
+    const { data: prods } = await supabase.from('produtos').select('*, categorias(nome, icone)')
+      .eq('loja_id', loja.id).order('ordem')
+    setCategorias(cats || [])
+    setProdutos(prods || [])
+    setCarregando(false)
   }
 
-  function removerDoCarrinho(index) {
-    setCarrinho(prev => prev.filter((_, i) => i !== index))
+  async function salvarProduto(form) {
+    if (!form.nome || !form.preco || !form.categoria_id) {
+      alert('Preencha nome, preço e categoria!')
+      return
+    }
+    const dados = {
+      nome: form.nome, descricao: form.descricao,
+      preco: parseFloat(form.preco), categoria_id: form.categoria_id,
+      disponivel: form.disponivel, imagem_url: form.imagem_url || null,
+      loja_id: loja.id
+    }
+    if (form.id) {
+      await supabase.from('produtos').update(dados).eq('id', form.id)
+      mostrarMensagem('✅ Produto atualizado!')
+    } else {
+      await supabase.from('produtos').insert(dados)
+      mostrarMensagem('✅ Produto criado!')
+    }
+    setFormAberto(false)
+    setProdutoEditando(null)
+    carregarDados()
   }
 
-  async function finalizarPedido(pagamento, local) {
-    const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
-
-    const hoje = new Date().toISOString().split('T')[0]
-    const { data: pedidosHoje } = await supabase
-      .from('pedidos').select('numero')
-      .eq('loja_id', loja.id)
-      .gte('criado_em', hoje)
-      .order('numero', { ascending: false })
-      .limit(1)
-
-    const proximoNumero = pedidosHoje && pedidosHoje.length > 0
-      ? pedidosHoje[0].numero + 1 : 1
-
-    const { data: pedido } = await supabase
-      .from('pedidos')
-      .insert({
-        numero: proximoNumero,
-        status: 'pendente',
-        forma_pagamento: pagamento,
-        local: local,
-        total: total,
-        loja_id: loja.id
-      })
-      .select()
-      .single()
-
-    await supabase.from('itens_pedido').insert(
-      carrinho.map(i => ({
-        pedido_id: pedido.id,
-        produto_id: i.id,
-        nome: i.nome,
-        preco: i.preco,
-        quantidade: i.qty
-      }))
-    )
-
-    setNumeroPedido(pedido.numero)
-    setCarrinho([])
-    setTela('confirmacao')
+  async function toggleDisponivel(produto) {
+    await supabase.from('produtos').update({ disponivel: !produto.disponivel }).eq('id', produto.id)
+    mostrarMensagem(produto.disponivel ? '⛔ Produto pausado' : '✅ Produto ativado')
+    carregarDados()
   }
 
-  if (rotaEspecial === 'admin') return <Admin />
-  if (rotaEspecial === 'cozinha') return <Cozinha lojaId={loja?.id} />
+  async function excluirProduto(id) {
+    if (!confirm('Tem certeza?')) return
+    await supabase.from('produtos').delete().eq('id', id)
+    mostrarMensagem('🗑️ Produto excluído')
+    carregarDados()
+  }
 
-  if (tela === 'inicio') return (
-    <TelaInicio
-      onComecar={() => setTela('categorias')}
-      onAdmin={() => setTela('admin')}
-      loja={loja}
-    />
+  function mostrarMensagem(msg) {
+    setMensagem(msg)
+    setTimeout(() => setMensagem(''), 3000)
+  }
+
+  const produtosFiltrados = categoriaFiltro === 'todas'
+    ? produtos : produtos.filter(p => p.categoria_id === categoriaFiltro)
+
+  if (!loja) return (
+    <div style={{ minHeight: '100vh', background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: '#fff' }}>Carregando...</p>
+    </div>
   )
-  if (tela === 'categorias') return (
-    <TelaCategorias
-      onEscolher={cat => { setCategoriaAtual(cat); setTela('produtos') }}
-      carrinho={carrinho}
-      onVerCarrinho={() => setTela('carrinho')}
-      loja={loja}
-    />
-  )
-  if (tela === 'produtos') return (
-    <TelaProdutos
-      categoria={categoriaAtual}
-      onVoltar={() => setTela('categorias')}
-      onAdicionar={adicionarAoCarrinho}
-      carrinho={carrinho}
-      onVerCarrinho={() => setTela('carrinho')}
-      loja={loja}
-    />
-  )
-  if (tela === 'carrinho') return (
-    <TelaCarrinho
-      carrinho={carrinho}
-      onVoltar={() => setTela('categorias')}
-      onAvancar={() => setTela('pagamento')}
-      onRemover={removerDoCarrinho}
-      loja={loja}
-    />
-  )
-  if (tela === 'pagamento') return (
-    <TelaPagamento
-      carrinho={carrinho}
-      onVoltar={() => setTela('carrinho')}
-      onFinalizar={finalizarPedido}
-      loja={loja}
-    />
-  )
-  if (tela === 'confirmacao') return (
-    <TelaConfirmacao
-      numero={numeroPedido}
-      onNovoPedido={() => setTela('inicio')}
-      loja={loja}
-    />
+
+  if (!logado) return <TelaLogin onLogin={() => setLogado(true)} nomeLoja={loja?.nome} />
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
+      <div style={{
+        background: loja?.cor_primaria || '#E85D04', padding: '16px 24px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+      }}>
+        <div>
+          <h1 style={{ color: '#fff', fontSize: 20, fontWeight: 700 }}>🍔 Painel Admin</h1>
+          <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13 }}>{loja?.nome}</p>
+        </div>
+        <button onClick={() => { setProdutoEditando(null); setFormAberto(true) }} style={{
+          background: '#fff', color: loja?.cor_primaria || '#E85D04',
+          padding: '10px 20px', borderRadius: 10, fontWeight: 700, fontSize: 15,
+          border: 'none', cursor: 'pointer'
+        }}>+ Novo Produto</button>
+      </div>
+
+      {mensagem && (
+        <div style={{ background: '#1a9c5b', color: '#fff', padding: '12px 24px', fontSize: 15, textAlign: 'center' }}>
+          {mensagem}
+        </div>
+      )}
+
+      <div style={{
+        padding: '16px 24px', display: 'flex', gap: 10,
+        overflowX: 'auto', background: '#fff', borderBottom: '1px solid #eee'
+      }}>
+        <button onClick={() => setCategoriaFiltro('todas')} style={{
+          padding: '8px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600,
+          background: categoriaFiltro === 'todas' ? loja?.cor_primaria || '#E85D04' : '#f5f5f5',
+          color: categoriaFiltro === 'todas' ? '#fff' : '#333', border: 'none', cursor: 'pointer'
+        }}>Todas</button>
+        {categorias.map(cat => (
+          <button key={cat.id} onClick={() => setCategoriaFiltro(cat.id)} style={{
+            padding: '8px 16px', borderRadius: 20, fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
+            background: categoriaFiltro === cat.id ? loja?.cor_primaria || '#E85D04' : '#f5f5f5',
+            color: categoriaFiltro === cat.id ? '#fff' : '#333', border: 'none', cursor: 'pointer'
+          }}>{cat.icone} {cat.nome}</button>
+        ))}
+      </div>
+
+      <div style={{ padding: 24 }}>
+        {carregando ? (
+          <p style={{ textAlign: 'center', color: '#888', marginTop: 40 }}>Carregando...</p>
+        ) : produtosFiltrados.length === 0 ? (
+          <p style={{ textAlign: 'center', color: '#888', marginTop: 40 }}>Nenhum produto ainda</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {produtosFiltrados.map(prod => (
+              <div key={prod.id} style={{
+                background: '#fff', borderRadius: 16, padding: 16,
+                display: 'flex', gap: 14, alignItems: 'center',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)', opacity: prod.disponivel ? 1 : 0.5
+              }}>
+                <div style={{
+                  width: 70, height: 70, borderRadius: 10, background: '#f5f5f5',
+                  flexShrink: 0, overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {prod.imagem_url ? (
+                    <img src={prod.imagem_url} alt={prod.nome}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <span style={{ fontSize: 30 }}>🍔</span>
+                  )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 600 }}>{prod.nome}</span>
+                    {!prod.disponivel && (
+                      <span style={{ background: '#fee', color: '#e33', fontSize: 11, padding: '2px 8px', borderRadius: 20 }}>
+                        PAUSADO
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                    {prod.categorias?.icone} {prod.categorias?.nome}
+                    {prod.descricao && ` • ${prod.descricao}`}
+                  </div>
+                  <div style={{ fontSize: 17, fontWeight: 700, color: loja?.cor_primaria || '#E85D04', marginTop: 4 }}>
+                    R$ {parseFloat(prod.preco).toFixed(2)}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => toggleDisponivel(prod)} style={{
+                    padding: '8px 12px', borderRadius: 8, fontSize: 18,
+                    background: prod.disponivel ? '#f0fff4' : '#fff0f0', border: '1px solid #eee', cursor: 'pointer'
+                  }}>{prod.disponivel ? '✅' : '⛔'}</button>
+                  <button onClick={() => { setProdutoEditando(prod); setFormAberto(true) }} style={{
+                    padding: '8px 12px', borderRadius: 8, fontSize: 18,
+                    background: '#f0f4ff', border: '1px solid #eee', cursor: 'pointer'
+                  }}>✏️</button>
+                  <button onClick={() => excluirProduto(prod.id)} style={{
+                    padding: '8px 12px', borderRadius: 8, fontSize: 18,
+                    background: '#fff0f0', border: '1px solid #eee', cursor: 'pointer'
+                  }}>🗑️</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {formAberto && (
+        <FormProduto
+          produto={produtoEditando}
+          categorias={categorias}
+          onSalvar={salvarProduto}
+          onCancelar={() => { setFormAberto(false); setProdutoEditando(null) }}
+        />
+      )}
+    </div>
   )
 }
