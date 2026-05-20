@@ -471,7 +471,7 @@ export default function App() {
   }
 
   if (rotaEspecial === 'admin') return <Admin />
-  if (rotaEspecial === 'cozinha') return <Cozinha lojaId={loja?.id} />
+  if (rotaEspecial === 'cozinha') return <Cozinha slug={slug} />
 
   if (tela === 'inicio') return (
     <TelaInicio

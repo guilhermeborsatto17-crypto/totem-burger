@@ -2,44 +2,60 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabase'
 
 const STATUS_COR = {
-  pendente:   { bg: '#fff8e1', borda: '#f59e0b', texto: '#b45309', label: '🟡 Novo'       },
-  preparando: { bg: '#eff6ff', borda: '#3b82f6', texto: '#1d4ed8', label: '🔵 Preparando' },
-  pronto:     { bg: '#f0fdf4', borda: '#22c55e', texto: '#15803d', label: '🟢 Pronto'     },
+  pendente:   { bg: '#fff8e1', borda: '#f59e0b', label: '🟡 Novo'       },
+  preparando: { bg: '#eff6ff', borda: '#3b82f6', label: '🔵 Preparando' },
+  pronto:     { bg: '#f0fdf4', borda: '#22c55e', label: '🟢 Pronto'     },
 }
 
-export default function Cozinha() {
+export default function Cozinha({ slug: slugProp }) {
   const [pedidos, setPedidos] = useState([])
+  const [loja, setLoja] = useState(null)
+
+  const partes = window.location.pathname.split('/').filter(Boolean)
+  const slug = slugProp || (partes.length > 1 ? partes[0] : null)
+
+  useEffect(() => {
+    async function carregarLoja() {
+      if (slug) {
+        const { data } = await supabase
+          .from('lojas').select('*').eq('slug', slug).single()
+        setLoja(data)
+      } else {
+        const { data } = await supabase
+          .from('lojas').select('*').eq('ativo', true).limit(1).single()
+        setLoja(data)
+      }
+    }
+    carregarLoja()
+  }, [])
+
+  useEffect(() => {
+    if (!loja) return
+    carregarPedidos()
+
+    const canal = supabase
+      .channel(`cozinha-${loja.id}`)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'pedidos'
+      }, () => carregarPedidos())
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'itens_pedido'
+      }, () => carregarPedidos())
+      .subscribe()
+
+    return () => supabase.removeChannel(canal)
+  }, [loja])
 
   async function carregarPedidos() {
+    if (!loja) return
     const { data } = await supabase
       .from('pedidos')
       .select('*, itens_pedido(*)')
+      .eq('loja_id', loja.id)
       .in('status', ['pendente', 'preparando'])
       .order('criado_em', { ascending: true })
     setPedidos(data || [])
   }
-
-  useEffect(() => {
-    carregarPedidos()
-
-    const canal = supabase
-      .channel('pedidos-cozinha')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'pedidos' },
-        () => carregarPedidos()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'itens_pedido' },
-        () => carregarPedidos()
-      )
-      .subscribe((status) => {
-        console.log('Realtime status:', status)
-      })
-
-    return () => supabase.removeChannel(canal)
-  }, [])
 
   async function atualizarStatus(id, status) {
     await supabase.from('pedidos').update({ status }).eq('id', id)
@@ -58,8 +74,12 @@ export default function Cozinha() {
         alignItems: 'center', marginBottom: 24
       }}>
         <div>
-          <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700 }}>🍳 Cozinha</h1>
-          <p style={{ color: '#888', fontSize: 14 }}>{pedidos.length} pedido(s) em aberto</p>
+          <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700 }}>
+            🍳 Cozinha
+          </h1>
+          <p style={{ color: '#888', fontSize: 14 }}>
+            {loja?.nome} — {pedidos.length} pedido(s) em aberto
+          </p>
         </div>
         <button onClick={carregarPedidos} style={{
           background: '#333', color: '#fff',
@@ -71,7 +91,9 @@ export default function Cozinha() {
       {pedidos.length === 0 ? (
         <div style={{ textAlign: 'center', marginTop: 80 }}>
           <div style={{ fontSize: 64 }}>✅</div>
-          <p style={{ color: '#888', fontSize: 20, marginTop: 16 }}>Nenhum pedido em aberto</p>
+          <p style={{ color: '#888', fontSize: 20, marginTop: 16 }}>
+            Nenhum pedido em aberto
+          </p>
         </div>
       ) : (
         <div style={{
@@ -130,26 +152,18 @@ export default function Cozinha() {
 
                 <div style={{ display: 'flex', gap: 8 }}>
                   {pedido.status === 'pendente' && (
-                    <button
-                      onClick={() => atualizarStatus(pedido.id, 'preparando')}
-                      style={{
-                        flex: 1, padding: 12,
-                        background: '#3b82f6', color: '#fff',
-                        borderRadius: 10, fontWeight: 700,
-                        fontSize: 14, border: 'none', cursor: 'pointer'
-                      }}
-                    >👨‍🍳 Iniciar</button>
+                    <button onClick={() => atualizarStatus(pedido.id, 'preparando')} style={{
+                      flex: 1, padding: 12, background: '#3b82f6', color: '#fff',
+                      borderRadius: 10, fontWeight: 700, fontSize: 14,
+                      border: 'none', cursor: 'pointer'
+                    }}>👨‍🍳 Iniciar</button>
                   )}
                   {pedido.status === 'preparando' && (
-                    <button
-                      onClick={() => atualizarStatus(pedido.id, 'pronto')}
-                      style={{
-                        flex: 1, padding: 12,
-                        background: '#22c55e', color: '#fff',
-                        borderRadius: 10, fontWeight: 700,
-                        fontSize: 14, border: 'none', cursor: 'pointer'
-                      }}
-                    >✅ Pronto!</button>
+                    <button onClick={() => atualizarStatus(pedido.id, 'pronto')} style={{
+                      flex: 1, padding: 12, background: '#22c55e', color: '#fff',
+                      borderRadius: 10, fontWeight: 700, fontSize: 14,
+                      border: 'none', cursor: 'pointer'
+                    }}>✅ Pronto!</button>
                   )}
                 </div>
               </div>
