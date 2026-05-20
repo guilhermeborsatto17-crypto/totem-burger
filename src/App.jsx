@@ -355,7 +355,9 @@ function TelaConfirmacao({ numero, onNovoPedido }) {
 }
 
 export default function App() {
-  const [tela, setTela] = useState('inicio')
+  const path = window.location.pathname
+const telaInicial = path === '/cozinha' ? 'cozinha' : path === '/admin' ? 'admin' : 'inicio'
+const [tela, setTela] = useState(telaInicial)
   const [categoriaAtual, setCategoriaAtual] = useState(null)
   const [carrinho, setCarrinho] = useState([])
   const [numeroPedido, setNumeroPedido] = useState(null)
