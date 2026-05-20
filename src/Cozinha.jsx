@@ -7,34 +7,14 @@ const STATUS_COR = {
   pronto:     { bg: '#f0fdf4', borda: '#22c55e', label: '🟢 Pronto'     },
 }
 
-export default function Cozinha({ slug: slugProp }) {
+export default function Cozinha() {
   const [pedidos, setPedidos] = useState([])
-  const [loja, setLoja] = useState(null)
-
-  const partes = window.location.pathname.split('/').filter(Boolean)
-  const slug = slugProp || (partes.length > 1 ? partes[0] : null)
 
   useEffect(() => {
-    async function carregarLoja() {
-      if (slug) {
-        const { data } = await supabase
-          .from('lojas').select('*').eq('slug', slug).single()
-        setLoja(data)
-      } else {
-        const { data } = await supabase
-          .from('lojas').select('*').eq('ativo', true).limit(1).single()
-        setLoja(data)
-      }
-    }
-    carregarLoja()
-  }, [])
-
-  useEffect(() => {
-    if (!loja) return
     carregarPedidos()
 
     const canal = supabase
-      .channel(`cozinha-${loja.id}`)
+      .channel('cozinha')
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'pedidos'
       }, () => carregarPedidos())
@@ -44,14 +24,12 @@ export default function Cozinha({ slug: slugProp }) {
       .subscribe()
 
     return () => supabase.removeChannel(canal)
-  }, [loja])
+  }, [])
 
   async function carregarPedidos() {
-    if (!loja) return
     const { data } = await supabase
       .from('pedidos')
       .select('*, itens_pedido(*)')
-      .eq('loja_id', loja.id)
       .in('status', ['pendente', 'preparando'])
       .order('criado_em', { ascending: true })
     setPedidos(data || [])
@@ -74,12 +52,8 @@ export default function Cozinha({ slug: slugProp }) {
         alignItems: 'center', marginBottom: 24
       }}>
         <div>
-          <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700 }}>
-            🍳 Cozinha
-          </h1>
-          <p style={{ color: '#888', fontSize: 14 }}>
-            {loja?.nome} — {pedidos.length} pedido(s) em aberto
-          </p>
+          <h1 style={{ color: '#fff', fontSize: 24, fontWeight: 700 }}>🍳 Cozinha</h1>
+          <p style={{ color: '#888', fontSize: 14 }}>{pedidos.length} pedido(s) em aberto</p>
         </div>
         <button onClick={carregarPedidos} style={{
           background: '#333', color: '#fff',
