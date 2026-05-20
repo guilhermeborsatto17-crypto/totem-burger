@@ -3,51 +3,78 @@ import Admin from './Admin'
 import Cozinha from './Cozinha'
 import { supabase } from './supabase'
 
-const API = 'http://localhost:8000'
+// Pega o slug da URL ex: /burguerhouse -> burguerhouse
+function getSlug() {
+  const path = window.location.pathname.replace('/', '').split('/')[0]
+  if (path === 'admin' || path === 'cozinha' || path === '') return null
+  return path || null
+}
 
-function TelaInicio({ onComecar, onAdmin }) {
+function getRotaEspecial() {
+  const path = window.location.pathname.replace('/', '').split('/')[0]
+  if (path === 'admin') return 'admin'
+  if (path === 'cozinha') return 'cozinha'
+  return null
+}
+
+function TelaInicio({ onComecar, onAdmin, loja }) {
   return (
     <div style={{
-      minHeight: '100vh', background: '#E85D04',
+      minHeight: '100vh',
+      background: loja?.cor_primaria || '#E85D04',
       display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 32
     }}>
-      <div style={{ fontSize: 80 }}>🍔</div>
-      <h1 style={{ color: '#fff', fontSize: 42, fontWeight: 700 }}>Burger House</h1>
-      <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 20 }}>Toque para começar</p>
+      {loja?.logo_url ? (
+        <img src={loja.logo_url} alt={loja.nome} style={{ width: 120, height: 120, borderRadius: 24, objectFit: 'cover' }} />
+      ) : (
+        <div style={{ fontSize: 80 }}>🍔</div>
+      )}
+      <h1 style={{ color: '#fff', fontSize: 42, fontWeight: 700 }}>
+        {loja?.nome || 'Burger House'}
+      </h1>
+      <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: 20 }}>
+        Toque para começar
+      </p>
       <button onClick={onComecar} style={{
-        background: '#fff', color: '#E85D04', fontSize: 24, fontWeight: 700,
-        padding: '20px 60px', borderRadius: 16, marginTop: 16, border: 'none', cursor: 'pointer'
+        background: '#fff',
+        color: loja?.cor_primaria || '#E85D04',
+        fontSize: 24, fontWeight: 700,
+        padding: '20px 60px', borderRadius: 16, marginTop: 16,
+        border: 'none', cursor: 'pointer'
       }}>
         Fazer Pedido
       </button>
       <button onClick={onAdmin} style={{
         background: 'transparent', color: 'rgba(255,255,255,0.2)',
-        fontSize: 11, marginTop: 40, padding: '8px 16px', border: 'none', cursor: 'pointer'
+        fontSize: 11, marginTop: 40, padding: '8px 16px',
+        border: 'none', cursor: 'pointer'
       }}>⚙</button>
     </div>
   )
 }
 
-function TelaCategorias({ onEscolher, carrinho, onVerCarrinho }) {
+function TelaCategorias({ onEscolher, carrinho, onVerCarrinho, loja }) {
   const [categorias, setCategorias] = useState([])
   const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
+  const cor = loja?.cor_primaria || '#E85D04'
 
   useEffect(() => {
-    supabase.from('categorias').select('*').eq('ativo', true).order('ordem')
-      .then(({ data }) => setCategorias(data || []))
-  }, [])
+    let query = supabase.from('categorias').select('*').eq('ativo', true).order('ordem')
+    if (loja?.id) query = query.eq('loja_id', loja.id)
+    query.then(({ data }) => setCategorias(data || []))
+  }, [loja])
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <div style={{
-        background: '#E85D04', padding: '20px 24px',
+        background: cor, padding: '20px 24px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center'
       }}>
         <h2 style={{ color: '#fff', fontSize: 22 }}>O que você quer?</h2>
         {carrinho.length > 0 && (
           <button onClick={onVerCarrinho} style={{
-            background: '#fff', color: '#E85D04',
+            background: '#fff', color: cor,
             padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 15,
             border: 'none', cursor: 'pointer'
           }}>🛒 R$ {total.toFixed(2)}</button>
@@ -70,22 +97,24 @@ function TelaCategorias({ onEscolher, carrinho, onVerCarrinho }) {
   )
 }
 
-function TelaProdutos({ categoria, onVoltar, onAdicionar, carrinho, onVerCarrinho }) {
+function TelaProdutos({ categoria, onVoltar, onAdicionar, carrinho, onVerCarrinho, loja }) {
   const [produtos, setProdutos] = useState([])
   const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
+  const cor = loja?.cor_primaria || '#E85D04'
 
   useEffect(() => {
-    supabase.from('produtos').select('*')
+    let query = supabase.from('produtos').select('*')
       .eq('categoria_id', categoria.id)
       .eq('disponivel', true)
       .order('ordem')
-      .then(({ data }) => setProdutos(data || []))
-  }, [categoria.id])
+    if (loja?.id) query = query.eq('loja_id', loja.id)
+    query.then(({ data }) => setProdutos(data || []))
+  }, [categoria.id, loja])
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <div style={{
-        background: '#E85D04', padding: '20px 24px',
+        background: cor, padding: '20px 24px',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -97,7 +126,7 @@ function TelaProdutos({ categoria, onVoltar, onAdicionar, carrinho, onVerCarrinh
         </div>
         {carrinho.length > 0 && (
           <button onClick={onVerCarrinho} style={{
-            background: '#fff', color: '#E85D04',
+            background: '#fff', color: cor,
             padding: '10px 18px', borderRadius: 10, fontWeight: 700, fontSize: 15,
             border: 'none', cursor: 'pointer'
           }}>🛒 R$ {total.toFixed(2)}</button>
@@ -133,12 +162,12 @@ function TelaProdutos({ categoria, onVoltar, onAdicionar, carrinho, onVerCarrinh
               <div style={{ fontSize: 13, color: '#888', marginTop: 3, lineHeight: 1.4 }}>
                 {prod.descricao}
               </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: '#E85D04', marginTop: 6 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: cor, marginTop: 6 }}>
                 R$ {prod.preco.toFixed(2)}
               </div>
             </div>
             <button onClick={() => onAdicionar(prod)} style={{
-              background: '#E85D04', color: '#fff',
+              background: cor, color: '#fff',
               width: 48, height: 48, borderRadius: 10,
               fontSize: 26, fontWeight: 700, flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -151,13 +180,14 @@ function TelaProdutos({ categoria, onVoltar, onAdicionar, carrinho, onVerCarrinh
   )
 }
 
-function TelaCarrinho({ carrinho, onVoltar, onAvancar, onRemover }) {
+function TelaCarrinho({ carrinho, onVoltar, onAvancar, onRemover, loja }) {
   const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
+  const cor = loja?.cor_primaria || '#E85D04'
 
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <div style={{
-        background: '#E85D04', padding: '20px 24px',
+        background: cor, padding: '20px 24px',
         display: 'flex', alignItems: 'center', gap: 12
       }}>
         <button onClick={onVoltar} style={{
@@ -193,7 +223,7 @@ function TelaCarrinho({ carrinho, onVoltar, onAvancar, onRemover }) {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 15, fontWeight: 600 }}>{item.nome}</div>
-              <div style={{ fontSize: 14, color: '#E85D04', marginTop: 2 }}>
+              <div style={{ fontSize: 14, color: cor, marginTop: 2 }}>
                 R$ {(item.preco * item.qty).toFixed(2)}
               </div>
             </div>
@@ -217,10 +247,10 @@ function TelaCarrinho({ carrinho, onVoltar, onAvancar, onRemover }) {
             display: 'flex', justifyContent: 'space-between', fontSize: 20, fontWeight: 700
           }}>
             <span>Total</span>
-            <span style={{ color: '#E85D04' }}>R$ {total.toFixed(2)}</span>
+            <span style={{ color: cor }}>R$ {total.toFixed(2)}</span>
           </div>
           <button onClick={onAvancar} style={{
-            width: '100%', background: '#E85D04', color: '#fff',
+            width: '100%', background: cor, color: '#fff',
             padding: 20, borderRadius: 16, fontSize: 20, fontWeight: 700,
             border: 'none', cursor: 'pointer'
           }}>Escolher Pagamento →</button>
@@ -230,10 +260,11 @@ function TelaCarrinho({ carrinho, onVoltar, onAvancar, onRemover }) {
   )
 }
 
-function TelaPagamento({ carrinho, onVoltar, onFinalizar }) {
+function TelaPagamento({ carrinho, onVoltar, onFinalizar, loja }) {
   const [pagamento, setPagamento] = useState(null)
   const [local, setLocal] = useState(null)
   const total = carrinho.reduce((s, i) => s + i.preco * i.qty, 0)
+  const cor = loja?.cor_primaria || '#E85D04'
 
   const formas = [
     { id: 'cartao_credito', nome: 'Crédito',  icone: '💳' },
@@ -252,7 +283,7 @@ function TelaPagamento({ carrinho, onVoltar, onFinalizar }) {
   return (
     <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
       <div style={{
-        background: '#E85D04', padding: '20px 24px',
+        background: cor, padding: '20px 24px',
         display: 'flex', alignItems: 'center', gap: 12
       }}>
         <button onClick={onVoltar} style={{
@@ -269,7 +300,7 @@ function TelaPagamento({ carrinho, onVoltar, onFinalizar }) {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
           <span style={{ fontSize: 18, color: '#666' }}>Total do pedido</span>
-          <span style={{ fontSize: 24, fontWeight: 700, color: '#E85D04' }}>
+          <span style={{ fontSize: 24, fontWeight: 700, color: cor }}>
             R$ {total.toFixed(2)}
           </span>
         </div>
@@ -280,9 +311,9 @@ function TelaPagamento({ carrinho, onVoltar, onFinalizar }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
           {locais.map(l => (
             <button key={l.id} onClick={() => setLocal(l.id)} style={{
-              background: local === l.id ? '#E85D04' : '#fff',
+              background: local === l.id ? cor : '#fff',
               color: local === l.id ? '#fff' : '#333',
-              border: local === l.id ? '2px solid #E85D04' : '2px solid #eee',
+              border: local === l.id ? `2px solid ${cor}` : '2px solid #eee',
               borderRadius: 16, padding: '20px 16px', fontSize: 16, fontWeight: 600,
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer'
@@ -299,9 +330,9 @@ function TelaPagamento({ carrinho, onVoltar, onFinalizar }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
           {formas.map(f => (
             <button key={f.id} onClick={() => setPagamento(f.id)} style={{
-              background: pagamento === f.id ? '#E85D04' : '#fff',
+              background: pagamento === f.id ? cor : '#fff',
               color: pagamento === f.id ? '#fff' : '#333',
-              border: pagamento === f.id ? '2px solid #E85D04' : '2px solid #eee',
+              border: pagamento === f.id ? `2px solid ${cor}` : '2px solid #eee',
               borderRadius: 16, padding: '20px 16px', fontSize: 16, fontWeight: 600,
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
               boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer'
@@ -315,7 +346,7 @@ function TelaPagamento({ carrinho, onVoltar, onFinalizar }) {
         <button
           onClick={() => podeFinalizar && onFinalizar(pagamento, local)}
           style={{
-            width: '100%', background: podeFinalizar ? '#E85D04' : '#ccc',
+            width: '100%', background: podeFinalizar ? cor : '#ccc',
             color: '#fff', padding: 20, borderRadius: 16, fontSize: 20, fontWeight: 700,
             border: 'none', cursor: podeFinalizar ? 'pointer' : 'not-allowed'
           }}
@@ -327,7 +358,7 @@ function TelaPagamento({ carrinho, onVoltar, onFinalizar }) {
   )
 }
 
-function TelaConfirmacao({ numero, onNovoPedido }) {
+function TelaConfirmacao({ numero, onNovoPedido, loja }) {
   return (
     <div style={{
       minHeight: '100vh', background: '#1a9c5b',
@@ -355,12 +386,30 @@ function TelaConfirmacao({ numero, onNovoPedido }) {
 }
 
 export default function App() {
-  const path = window.location.pathname
-const telaInicial = path === '/cozinha' ? 'cozinha' : path === '/admin' ? 'admin' : 'inicio'
-const [tela, setTela] = useState(telaInicial)
+  const [tela, setTela] = useState('inicio')
   const [categoriaAtual, setCategoriaAtual] = useState(null)
   const [carrinho, setCarrinho] = useState([])
   const [numeroPedido, setNumeroPedido] = useState(null)
+  const [loja, setLoja] = useState(null)
+
+  const rotaEspecial = getRotaEspecial()
+  const slug = getSlug()
+
+  useEffect(() => {
+    if (rotaEspecial) return
+    async function carregarLoja() {
+      if (slug) {
+        const { data } = await supabase
+          .from('lojas').select('*').eq('slug', slug).single()
+        setLoja(data)
+      } else {
+        const { data } = await supabase
+          .from('lojas').select('*').eq('ativo', true).limit(1).single()
+        setLoja(data)
+      }
+    }
+    carregarLoja()
+  }, [])
 
   function adicionarAoCarrinho(produto) {
     setCarrinho(prev => {
@@ -382,6 +431,7 @@ const [tela, setTela] = useState(telaInicial)
     const hoje = new Date().toISOString().split('T')[0]
     const { data: pedidosHoje } = await supabase
       .from('pedidos').select('numero')
+      .eq('loja_id', loja.id)
       .gte('criado_em', hoje)
       .order('numero', { ascending: false })
       .limit(1)
@@ -396,7 +446,8 @@ const [tela, setTela] = useState(telaInicial)
         status: 'pendente',
         forma_pagamento: pagamento,
         local: local,
-        total: total
+        total: total,
+        loja_id: loja.id
       })
       .select()
       .single()
@@ -416,13 +467,14 @@ const [tela, setTela] = useState(telaInicial)
     setTela('confirmacao')
   }
 
-  if (tela === 'admin') return <Admin />
-  if (tela === 'cozinha') return <Cozinha />
+  if (rotaEspecial === 'admin') return <Admin />
+  if (rotaEspecial === 'cozinha') return <Cozinha lojaId={loja?.id} />
 
   if (tela === 'inicio') return (
     <TelaInicio
       onComecar={() => setTela('categorias')}
       onAdmin={() => setTela('admin')}
+      loja={loja}
     />
   )
   if (tela === 'categorias') return (
@@ -430,6 +482,7 @@ const [tela, setTela] = useState(telaInicial)
       onEscolher={cat => { setCategoriaAtual(cat); setTela('produtos') }}
       carrinho={carrinho}
       onVerCarrinho={() => setTela('carrinho')}
+      loja={loja}
     />
   )
   if (tela === 'produtos') return (
@@ -439,6 +492,7 @@ const [tela, setTela] = useState(telaInicial)
       onAdicionar={adicionarAoCarrinho}
       carrinho={carrinho}
       onVerCarrinho={() => setTela('carrinho')}
+      loja={loja}
     />
   )
   if (tela === 'carrinho') return (
@@ -447,6 +501,7 @@ const [tela, setTela] = useState(telaInicial)
       onVoltar={() => setTela('categorias')}
       onAvancar={() => setTela('pagamento')}
       onRemover={removerDoCarrinho}
+      loja={loja}
     />
   )
   if (tela === 'pagamento') return (
@@ -454,12 +509,14 @@ const [tela, setTela] = useState(telaInicial)
       carrinho={carrinho}
       onVoltar={() => setTela('carrinho')}
       onFinalizar={finalizarPedido}
+      loja={loja}
     />
   )
   if (tela === 'confirmacao') return (
     <TelaConfirmacao
       numero={numeroPedido}
       onNovoPedido={() => setTela('inicio')}
+      loja={loja}
     />
   )
 }
